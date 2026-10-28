@@ -4,6 +4,7 @@ type MuIcon = {
   icon: string
   cursor?: string
   size?: string | number
+  className?: string
   clickIcon?: () => void
 }
 
@@ -11,6 +12,7 @@ export default function MuIcon({
   size = "16",
   icon,
   cursor = "default",
+  className = "",
   clickIcon,
 }: MuIcon) {
   const iconStyle = {
@@ -18,7 +20,11 @@ export default function MuIcon({
     cursor,
   }
   return (
-    <span className="material-icons" style={iconStyle} onClick={clickIcon}>
+    <span
+      className={`material-icons ${className}`}
+      style={iconStyle}
+      onClick={clickIcon}
+    >
       {icon}
     </span>
   )

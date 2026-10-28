@@ -91,16 +91,6 @@ export const categoryTodoListOptionsService = async (
   todoList: TodoItemModel[],
   categoryList: TodoCategoryDto[]
 ) => {
-  const isAllCategory = categoryList.find((item) => item.id === null)
-  if (!isAllCategory) {
-    categoryList.unshift({
-      id: null,
-      created_at: "",
-      name: "전체",
-      user_id: "",
-    })
-  }
-
   const categoryNameList = categoryList?.map((item) => item.name)
 
   const checkedList = categoryList?.map((item) => {

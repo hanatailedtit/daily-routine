@@ -56,6 +56,7 @@ export default function DefaultTodoItem({
     if (!enterTodoItem) return
     enterTodoItem(editorValue, item.id)
     setIsClickAdd(false)
+    setEditorValue("")
   }
 
   const handleClickAddButton = () => {
@@ -63,6 +64,7 @@ export default function DefaultTodoItem({
   }
 
   const handleClickCancelButton = () => {
+    setEditorValue("")
     setIsClickAdd(false)
   }
 

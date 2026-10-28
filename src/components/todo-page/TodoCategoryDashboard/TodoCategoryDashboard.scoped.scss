@@ -13,7 +13,7 @@
       border-radius: 8px;
       @include flexRow(space-between, center);
       &:hover {
-        background-color: rgba(var(--gray), 1);
+        background-color: #efefef;
       }
     }
   }

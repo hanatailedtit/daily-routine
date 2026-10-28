@@ -15,10 +15,14 @@ import { useSearchParams } from "react-router-dom"
 import { useRecoilValue } from "recoil"
 
 export const useTodoList = () => {
+  const draggingClassName = "dragging"
+
+  let topPosition = 0
+  let itemId: number
+  let draggedItem: TodoItemModel | null = null
+
   const [todoList, setTodoList] = useState<TodoItemModel[]>([])
-  const [dragStartElement, setDragStartElement] =
-    useState<HTMLDivElement | null>()
-  const [dragItem, setDragItem] = useState<TodoItemModel>()
+  const [isDragging, setIsDragging] = useState(false)
   const userData = useRecoilValue(userProfileSelector)
   const userId = userData?.id
   const [searchParams] = useSearchParams()
@@ -125,45 +129,85 @@ export const useTodoList = () => {
   }
 
   const dragStartTodoItem = (e: DragEvent, item: TodoItemModel) => {
-    setDragItem(item)
-
-    const element = e.target as HTMLDivElement
-    setDragStartElement(element)
-
-    setTimeout(() => {
-      element.classList.add("hidden")
-    })
-  }
-
-  const dragOverTodoItem = (e: DragEvent) => {
     e.preventDefault()
+    const element = document.getElementById(
+      `todo-item-${item.id}`
+    ) as HTMLDivElement
+
+    if (!element) return
+    setIsDragging(true)
+    draggedItem = item
+    topPosition = e.clientY - element.offsetTop
+    itemId = item.id
+
+    document.addEventListener("mousemove", mouseMoveItem)
+    document.addEventListener("mouseup", mouseEndItem)
+
+    element.classList.add(draggingClassName)
   }
 
-  const dragEndTodoItem = () => {
-    if (!dragStartElement) return
-    dragStartElement.classList.remove("hidden")
-    dragStartElement.classList.remove("draggable")
+  const mouseMoveItem = (e: MouseEvent) => {
+    if (itemId === undefined) return
+    const element = document.getElementById(`todo-item-${itemId}`)
+
+    if (!element) return
+    element.style.top = (e.clientY - topPosition).toString() + "px"
   }
 
-  const dropTodoItem = async (e: DragEvent, item: TodoItemModel) => {
-    e.preventDefault()
-    if (!dragItem) return
+  const mouseEndItem = async (e: MouseEvent) => {
+    document.removeEventListener("mousemove", mouseMoveItem)
+    document.removeEventListener("mouseup", mouseEndItem)
+    setIsDragging(false)
+    if (itemId === undefined) return
+    const element = document.getElementById(`todo-item-${itemId}`)
 
-    const copyItem = { ...item }
+    if (!element) return
+    element.classList.remove(draggingClassName)
+    element.style.top = "0px"
+    const target = e.target as Element | null
+    const targetId = target?.closest<HTMLElement>("[data-id]")?.dataset.id
 
-    item.order = dragItem.order
-    dragItem.order = copyItem.order
+    if (!targetId) return
 
-    await updateTodoItemService(item.id, toTodoItemReqDto(item))
-    await updateTodoItemService(dragItem.id, toTodoItemReqDto(dragItem))
+    const targetItem = todoList.find((item) => item.id === Number(targetId))
+
+    if (!draggedItem || !targetItem || draggedItem.id === targetItem.id) return
+
+    const copyItem = { ...targetItem }
+
+    targetItem.order = draggedItem.order
+    draggedItem.order = copyItem.order
+
+    await updateTodoItemService(targetItem.id, toTodoItemReqDto(targetItem))
+    await updateTodoItemService(draggedItem.id, toTodoItemReqDto(draggedItem))
 
     fetchTodoList()
+  }
+
+  const dragEndTodoItem = (e: DragEvent) => {
+    e.stopPropagation()
   }
 
   const clickRandomTodoListButton = async () => {
     const number = Math.floor(Math.random() * TODO_LIST.length)
     const randomItem = TODO_LIST[number]
     await enterTodoItem(randomItem)
+  }
+
+  const mouseOverItemWrapper = (e: React.MouseEvent) => {
+    const element = e.currentTarget as HTMLDivElement
+    const dataId = element.dataset?.id
+    if (!isDragging || !dataId) return
+    element.style.backgroundColor = "#efefef"
+    element.style.cursor = "pointer"
+  }
+
+  const mouseOutItemWrapper = (e: React.MouseEvent) => {
+    const element = e.currentTarget as HTMLDivElement
+    const dataId = element.dataset?.id
+    if (!dataId) return
+    element.style.backgroundColor = "rgb(var(--white))"
+    element.style.cursor = "default"
   }
 
   useEffect(() => {
@@ -178,9 +222,9 @@ export const useTodoList = () => {
     clickDeleteButton,
     editTodoItemValue,
     dragStartTodoItem,
-    dragOverTodoItem,
-    dropTodoItem,
     dragEndTodoItem,
     clickRandomTodoListButton,
+    mouseOverItemWrapper,
+    mouseOutItemWrapper,
   }
 }

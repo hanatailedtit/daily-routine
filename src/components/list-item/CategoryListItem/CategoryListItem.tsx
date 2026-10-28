@@ -8,7 +8,7 @@ import "./CategoryListItem.scoped.scss"
 
 type CategoryListItemProps = {
   item: TodoCategoryModel
-  clickCategory: (id: TodoCategoryModel["id"]) => void
+  clickCategory: (item: TodoCategoryModel) => void
   clickDeleteButton: (e: MouseEvent, id: TodoCategoryModel["id"]) => void
   clickEditName: (
     id: TodoCategoryModel["id"],
@@ -44,7 +44,7 @@ export default function CategoryListItem({
         <li
           className="category-list-item"
           key={item.id}
-          onClick={() => clickCategory(item.id)}
+          onClick={() => clickCategory(item)}
         >
           {item.name}
           <div className="control-button">

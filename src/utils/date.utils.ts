@@ -4,9 +4,6 @@ export const DATE_FORMAT = {
   default: "YYYY-MM-DD",
 } as const
 
-export const parseDateToFormat = (
-  date: string,
-  format = DATE_FORMAT.default
-) => {
+export const parseDateToFormat = (date: string) => {
   return DateTime.fromISO(date).toLocaleString()
 }

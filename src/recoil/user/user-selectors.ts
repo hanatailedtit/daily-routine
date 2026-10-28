@@ -23,10 +23,12 @@ export const userProfileSelector = selector<UserProfileModel | null>({
       const userData = await getUserProfile(userId)
 
       if (!userData) {
-        insertUserProfile(userId, email ?? "", thumbnail)
-
-        const refreshUserData = await getUserProfile(userId)
-        return refreshUserData
+        await insertUserProfile(userId, email ?? "", thumbnail)
+        return {
+          id: userId,
+          user_image: thumbnail,
+          user_name: email || "",
+        }
       }
 
       return userData

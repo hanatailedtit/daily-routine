@@ -43,7 +43,7 @@ export const useChartSeries = (
         break
       }
     }
-  }, [type])
+  }, [type, todoList, categoryList])
 
   useEffect(() => {
     fetchChartData()

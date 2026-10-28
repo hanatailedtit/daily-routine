@@ -11,6 +11,6 @@ export default meta
 
 export const Default: StoryObj<typeof meta> = {
   args: {
-    item: { id: 0, text: "꽃에 물 주기", checked: true },
+    item: { id: 0, text: "꽃에 물 주기", checked: true, created_at: "" },
   },
 }

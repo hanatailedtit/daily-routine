@@ -17,19 +17,27 @@ export default function TodoInput({
   buttonFontSize,
 }: TodoInputProps) {
   const [inputText, setInputText] = useState(defaultInputValue)
+  const [alertText, setAlertText] = useState("")
 
   const changeInput = (e: ChangeEvent) => {
     const element = e.target as HTMLInputElement
     const value = element.value
     setInputText(value)
+    setAlertText("")
   }
   const clickTodoItemButton = () => {
+    if (!inputText.trim()) {
+      setAlertText("카테고리 제목을 입력해주세요.")
+      return
+    }
     setTodoItemValue(inputText)
+    setInputText("")
+    setAlertText("")
   }
 
   const enterTodoItem = (e: KeyboardEvent) => {
     if (e.code === "Enter" && !e.nativeEvent.isComposing) {
-      setTodoItemValue(inputText)
+      clickTodoItemButton()
     }
   }
   return (
@@ -39,6 +47,9 @@ export default function TodoInput({
           changeInput={changeInput}
           enterInput={enterTodoItem}
           inputValue={inputText}
+          placeholder="카테고리 제목"
+          isWrong={Boolean(alertText)}
+          wrongText={alertText}
         />
       </div>
       <DefaultButton

@@ -5,7 +5,7 @@ import { modalState } from "./recoil/modal/modal"
 import router from "./router"
 
 export default function App() {
-  const [modal, setModal] = useRecoilState(modalState)
+  const [modal] = useRecoilState(modalState)
   return (
     <>
       {modal.isOpenModal && <ConfirmModal />}

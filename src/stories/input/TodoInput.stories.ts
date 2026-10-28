@@ -8,4 +8,8 @@ const meta = {
 
 export default meta
 
-export const Default: StoryObj<typeof meta> = {}
+export const Default: StoryObj<typeof meta> = {
+  args: {
+    buttonText: "입력",
+  },
+}
