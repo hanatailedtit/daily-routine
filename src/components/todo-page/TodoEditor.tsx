@@ -44,9 +44,11 @@ export default function TodoEditor({
   onClose: () => void
   onSave: (html: string, categoryId: number | null) => Promise<boolean>
 }) {
-  const initial = state.mode === "edit" ? state.item?.text || "" : ""
+  const initial =
+    state.mode === "edit" ? sanitizeTodo(state.item?.text || "") : ""
   const [value, setValue] = useState(initial)
   const [pending, setPending] = useState(false)
+  const [imagePending, setImagePending] = useState(false)
   const [error, setError] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] =
     useState(initialCategoryId)
@@ -65,7 +67,7 @@ export default function TodoEditor({
   const categoryName =
     availableCategories.find((category) => category.id === selectedCategoryId)
       ?.name || "미분류"
-  const busy = pending || categoryPending
+  const busy = pending || categoryPending || imagePending
   const [mobile, setMobile] = useState(
     () => window.matchMedia("(max-width: 1023px)").matches
   )
@@ -75,7 +77,6 @@ export default function TodoEditor({
   }))
   const allowExit = useRef(false)
   const title = useRef<HTMLHeadingElement>(null)
-  const content = useRef<HTMLDivElement>(null)
   const dirty =
     value !== initial ||
     (state.mode === "new" && selectedCategoryId !== initialCategoryId)
@@ -132,6 +133,8 @@ export default function TodoEditor({
         allowExit.current = true
         onClose()
       } else setError("저장하지 못했어요. 작성한 내용은 유지되어 있어요.")
+    } catch {
+      setError("저장하지 못했어요. 작성한 내용은 유지되어 있어요.")
     } finally {
       setPending(false)
     }
@@ -145,7 +148,6 @@ export default function TodoEditor({
       }}
     >
       <DialogContent
-        ref={content}
         showCloseButton={false}
         aria-modal="true"
         className="todo-editor flex max-h-[calc(100dvh-3rem)] w-[calc(100vw-3rem)] max-w-[760px] flex-col gap-0 rounded-lg p-0 shadow-none sm:rounded-lg"
@@ -154,10 +156,6 @@ export default function TodoEditor({
           title.current?.focus({ preventScroll: true })
         }}
         onCloseAutoFocus={(event) => event.preventDefault()}
-        onEscapeKeyDown={(event) => {
-          if (content.current?.querySelector(".tox-dialog, .tox-menu"))
-            event.preventDefault()
-        }}
         style={
           mobile ? { height: viewport.height, top: viewport.top } : undefined
         }
@@ -302,7 +300,7 @@ export default function TodoEditor({
                 value={value}
                 setValue={setValue}
                 disabled={busy}
-                onEscape={close}
+                onBusyChange={setImagePending}
               />
             </Suspense>
           </div>

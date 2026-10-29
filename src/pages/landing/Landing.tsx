@@ -18,18 +18,29 @@ export default function Landing() {
   )
   useEffect(() => {
     if (!isSupabaseConfigured) return
+    let active = true
+    let sessionChanged = false
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
+        if (!active || sessionChanged) return
         if (error)
           setError("로그인 상태를 확인하지 못했어요. 다시 로그인해 주세요.")
         if (data.session) navigate("/todo-page", { replace: true })
       })
-      .catch(() => setError("연결을 확인하고 다시 로그인해 주세요."))
+      .catch(() => {
+        if (active && !sessionChanged)
+          setError("연결을 확인하고 다시 로그인해 주세요.")
+      })
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return
+      sessionChanged = true
       if (session) navigate("/todo-page", { replace: true })
     })
-    return () => data.subscription.unsubscribe()
+    return () => {
+      active = false
+      data.subscription.unsubscribe()
+    }
   }, [navigate])
   const login = async () => {
     setPending(true)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRecoilRefresher_UNSTABLE, useRecoilValue } from "recoil"
 import { useOutletContext } from "react-router-dom"
 import { userProfileSelector } from "@/recoil/user/user-selectors"
@@ -15,17 +15,29 @@ export function useWorkspaceData() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+  const userId = profile?.id
+  const requestId = useRef(0)
+  const mounted = useRef(true)
+  const mutating = useRef(false)
   const reload = useCallback(async () => {
-    if (!profile) return
-    const [items, categoryList] = await Promise.all([
-      getTodoListService(profile.id, null),
-      getTodoCategoryListService(profile.id),
-    ])
-    setTodos(items)
-    setCategories(categoryList || [])
-  }, [profile])
+    const currentRequest = ++requestId.current
+    if (!userId) return
+    try {
+      const [items, categoryList] = await Promise.all([
+        getTodoListService(userId, null),
+        getTodoCategoryListService(userId),
+      ])
+      if (!mounted.current || currentRequest !== requestId.current) return
+      setTodos(items)
+      setCategories(categoryList)
+      setError("")
+    } catch (error) {
+      if (mounted.current && currentRequest === requestId.current) throw error
+    }
+  }, [userId])
   useEffect(() => {
     let active = true
+    mounted.current = true
     setLoading(true)
     reload()
       .catch(() => {
@@ -39,27 +51,42 @@ export function useWorkspaceData() {
       })
     return () => {
       active = false
+      mounted.current = false
     }
   }, [reload])
   const mutate = async (action: () => Promise<void>) => {
-    if (busy) return false
+    if (mutating.current || !mounted.current) return false
+    mutating.current = true
     setBusy(true)
     setError("")
     try {
       await action()
+      if (!mounted.current) return false
       try {
         await reload()
       } catch {
-        setError(
-          "저장했지만 목록을 불러오지 못했어요. 다시 불러와 결과를 확인해 주세요."
-        )
+        if (mounted.current)
+          setError(
+            "저장했지만 목록을 불러오지 못했어요. 다시 불러와 결과를 확인해 주세요."
+          )
       }
       return true
     } catch {
-      setError("변경하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.")
+      if (!mounted.current) return false
+      // Separate REST writes can partially succeed; show the persisted state.
+      try {
+        await reload()
+      } catch {
+        // Keep the last snapshot and the failure message when recovery also fails.
+      }
+      if (mounted.current)
+        setError(
+          "변경을 완료하지 못했어요. 목록을 확인한 뒤 다시 시도해 주세요."
+        )
       return false
     } finally {
-      setBusy(false)
+      mutating.current = false
+      if (mounted.current) setBusy(false)
     }
   }
   return {

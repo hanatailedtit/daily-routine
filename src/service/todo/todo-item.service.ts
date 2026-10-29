@@ -5,9 +5,7 @@ import {
 } from "@/model/todo/todo-item.dto"
 import { TodoItemModel } from "@/model/todo/todo-item.model"
 import {
-  addTodoItem,
   deleteTodoItem,
-  getTodoItem,
   getTodoList,
   getTodoSubList,
   updateTodoItem,
@@ -18,46 +16,33 @@ export const getTodoListService = async (
   categoryId: string | null
 ) => {
   const data = await getTodoList(userId, categoryId)
-  const subData = data.filter((item) => item.sub_id)
-
-  const todoList = data.map((item) => {
-    const subList = subData
-      .filter((sub) => sub.sub_id === item.id)
-      .map((item) => toTodoItemModel(item))
-
-    return {
-      ...toTodoItemModel(item),
-      sub_item: subList.length > 0 ? subList : null,
+  const parents: TodoItemModel[] = []
+  const children = new Map<number, TodoItemModel[]>()
+  for (const item of data) {
+    const model = toTodoItemModel(item)
+    if (item.sub_id == null) parents.push(model)
+    else {
+      const siblings = children.get(item.sub_id)
+      if (siblings) siblings.push(model)
+      else children.set(item.sub_id, [model])
     }
-  })
-
-  return todoList.filter((item) => !item.sub_id)
+  }
+  return parents.map((item) => ({
+    ...item,
+    sub_item: children.get(item.id) || null,
+  }))
 }
 
-export const getTodoListItemService = async (id: TodoItemDto["id"]) => {
-  const data = await getTodoItem(id)
-  if (!data) return
-  return toTodoItemModel(data)
+async function waitForWrites(writes: Promise<void>[]) {
+  // Keep the mutation locked until every started request has settled.
+  const results = await Promise.allSettled(writes)
+  const failure = results.find((result) => result.status === "rejected")
+  if (failure?.status === "rejected") throw failure.reason
 }
 
 export const getTodoSubListService = async (subId: TodoItemDto["sub_id"]) => {
   const data = await getTodoSubList(subId)
   return data.map((item) => toTodoItemModel(item))
-}
-
-export const addTodoListSerivce = async (
-  text: string,
-  itemId: TodoItemDto["id"] | null,
-  userId: TodoItemDto["user_id"],
-  categoryId: string | null
-) => {
-  const todoReq: TodoItemReqDto = {
-    todo_text: text,
-    user_id: userId,
-    sub_id: itemId,
-  }
-  if (categoryId) todoReq["category_id"] = Number(categoryId)
-  await addTodoItem(todoReq)
 }
 
 export const updateTodoItemService = async (
@@ -76,7 +61,7 @@ export const setTodoCheckedService = async (
   checked: boolean
 ) => {
   if (item.sub_item?.length)
-    await Promise.all(
+    await waitForWrites(
       item.sub_item.map((child) => updateTodoItemService(child.id, { checked }))
     )
   await updateTodoItemService(item.id, { checked })
@@ -110,7 +95,7 @@ export const reorderTodoService = async (
   const [item] = next.splice(from, 1)
   next.splice(to, 0, item)
   // shortcut: ranks use separate REST writes; use a DB transaction if atomic ordering is required.
-  await Promise.all(
+  await waitForWrites(
     next.map((todo, order) => updateTodoItemService(todo.id, { order }))
   )
 }

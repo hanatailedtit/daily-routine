@@ -157,3 +157,170 @@ test("failed writes propagate, and deleting a last child does not mark its empty
   await service.removeTodoService({ id: 2, sub_id: 1 })
   assert.deepEqual(updates, [[1, false]])
 })
+
+function loadWorkspace(overrides = {}) {
+  const slots = []
+  let cursor = 0
+  const { useWorkspaceData } = loadSource("src/hooks/useWorkspace.ts", {
+    react: {
+      useState(initial) {
+        const index = cursor++
+        if (!(index in slots)) slots[index] = initial
+        return [slots[index], value => { slots[index] = typeof value === "function" ? value(slots[index]) : value }]
+      },
+      useRef(initial) {
+        const index = cursor++
+        if (!(index in slots)) slots[index] = { current: initial }
+        return slots[index]
+      },
+      useCallback: callback => callback,
+      useEffect: () => {},
+    },
+    recoil: { useRecoilValue: () => ({ id: "user-1" }), useRecoilRefresher_UNSTABLE: () => () => {} },
+    "react-router-dom": {},
+    "@/recoil/user/user-selectors": {},
+    "@/service/todo/todo-item.service": { getTodoListService: async () => [], ...overrides },
+    "@/service/todo/todo-category.service": { getTodoCategoryListService: async () => [] },
+  })
+  return () => { cursor = 0; return useWorkspaceData() }
+}
+
+test("workspace rejects a duplicate mutation before React rerenders", async () => {
+  const render = loadWorkspace()
+  const workspace = render()
+  let writes = 0
+  let finish
+  const gate = new Promise(resolve => { finish = resolve })
+  const action = async () => { writes++; await gate }
+  const first = workspace.mutate(action)
+  const duplicate = workspace.mutate(action)
+  finish()
+  const result = await Promise.all([first, duplicate])
+  assert.equal(writes, 1)
+  assert.deepEqual(result, [true, false])
+  assert.equal(render().busy, false)
+})
+
+test("an older workspace read cannot replace a newer snapshot", async () => {
+  const responses = []
+  const render = loadWorkspace({ getTodoListService: () => new Promise(resolve => responses.push(resolve)) })
+  const workspace = render()
+  const older = workspace.reload()
+  const newer = workspace.reload()
+  responses[1]([{ id: 2 }])
+  await newer
+  responses[0]([{ id: 1 }])
+  await older
+  assert.deepEqual(render().todos, [{ id: 2 }])
+})
+
+test("failed compound mutations reload persisted changes before unlocking the workspace", async () => {
+  let saved = []
+  const render = loadWorkspace({ getTodoListService: async () => saved })
+  const result = await render().mutate(async () => {
+    saved = [{ id: 1, checked: true }]
+    throw new Error("second write failed")
+  })
+  assert.equal(result, false)
+  assert.deepEqual(render().todos, saved)
+  assert.equal(render().busy, false)
+  assert.notEqual(render().error, "")
+})
+
+test("a failed batch waits for remaining writes and does not update its parent", async () => {
+  let finish
+  let settled = false
+  const writes = []
+  const service = loadTodoService({ updateTodoItem: async id => {
+    writes.push(id)
+    if (id === 2) throw new Error("child write failed")
+    await new Promise(resolve => { finish = resolve })
+  } })
+  const result = service.setTodoCheckedService({ id: 1, sub_item: [{ id: 2 }, { id: 3 }] }, true)
+    .then(() => { settled = true }, error => { settled = true; return error })
+  await new Promise(setImmediate)
+  const settledEarly = settled
+  finish()
+  assert.match((await result).message, /child write failed/)
+  assert.equal(settledEarly, false)
+  assert.deepEqual(writes, [2, 3])
+})
+
+test("paged reads include every row even when the server caps pages below the request size", async () => {
+  const { fetchAllRows } = loadSource("src/repository/query.ts")
+  const rows = Array.from({ length: 1205 }, (_, id) => ({ id }))
+  const ranges = []
+  const result = await fetchAllRows(async (from, to) => {
+    ranges.push([from, to])
+    return { data: rows.slice(from, Math.min(from + 400, to + 1)) }
+  })
+  assert.deepEqual(result, rows)
+  assert.deepEqual(ranges.map(range => range[0]), [0, 400, 800, 1200, 1205])
+  await assert.rejects(() => fetchAllRows(async () => { throw new Error("page failed") }), /page failed/)
+  assert.deepEqual(await fetchAllRows(async () => ({ data: [] })), [])
+})
+
+test("todo grouping preserves root and child order, ignores orphans and does not mutate rows", async () => {
+  const rows = Object.freeze([
+    Object.freeze({ id: 3, sub_id: 1, todo_text: "first child" }),
+    Object.freeze({ id: 2, sub_id: null, todo_text: "first root" }),
+    Object.freeze({ id: 1, sub_id: null, todo_text: "second root" }),
+    Object.freeze({ id: 4, sub_id: 1, todo_text: "second child" }),
+    Object.freeze({ id: 5, sub_id: 99, todo_text: "orphan" }),
+  ])
+  const service = loadTodoService({ getTodoList: async () => rows })
+  const grouped = await service.getTodoListService("user-1", null)
+  assert.deepEqual(grouped.map(item => item.id), [2, 1])
+  assert.equal(grouped[0].sub_item, null)
+  assert.deepEqual(grouped[1].sub_item.map(item => item.id), [3, 4])
+  assert.deepEqual(await loadTodoService({ getTodoList: async () => [] }).getTodoListService("user-1", null), [])
+})
+
+test("renaming categories and profiles shares creation validation and preserves image-only updates", async () => {
+  const categories = []
+  const profiles = []
+  const category = loadSource("src/service/todo/todo-category.service.ts", {
+    "@/repository/todo/todo-category.repository": { updateTodoCategory: async (...args) => categories.push(args) },
+  })
+  const profile = loadSource("src/service/user/profile.service.ts", {
+    "@/repository/user/profile.repository": { updateUserProfile: async (...args) => profiles.push(args) },
+  })
+  for (const name of ["   ", "가".repeat(61)]) {
+    await assert.rejects(() => category.updateTodoCategoryService(1, { name }), /1~60/)
+    await assert.rejects(() => profile.updateUserProfileService("user-1", { user_name: name }), /1~60/)
+  }
+  await category.updateTodoCategoryService(1, { name: "  운동  " })
+  await profile.updateUserProfileService("user-1", { user_name: "  지영  " })
+  await profile.updateUserProfileService("user-1", { user_image: "avatar.png" })
+  assert.deepEqual(categories, [[1, { name: "운동" }]])
+  assert.deepEqual(profiles, [["user-1", { user_name: "지영" }], ["user-1", { user_image: "avatar.png" }]])
+})
+
+test("late session reads cannot navigate after logout or landing unmount", async () => {
+  for (const scenario of ["signed-out", "unmounted", "valid"]) {
+    let effect, finish, changed
+    let unsubscribed = 0
+    const navigation = []
+    const { default: Landing } = loadSource("src/pages/landing/Landing.tsx", {
+      react: { useEffect: callback => { effect = callback }, useState: initial => [typeof initial === "function" ? "" : initial, () => {}] },
+      "react-router-dom": { useNavigate: () => (...args) => navigation.push(args) },
+      "@/assets/images/logo/google-logo.png": { default: "logo.png" },
+      "@/components/shared/Brand": { default: "span" },
+      "@/components/ui/button": { Button: "button" },
+      "@/supabase/auth": {},
+      "@/supabase/init": { isSupabaseConfigured: true, default: { auth: {
+        getSession: () => new Promise(resolve => { finish = resolve }),
+        onAuthStateChange: callback => { changed = callback; return { data: { subscription: { unsubscribe: () => { unsubscribed++ } } } } },
+      } } },
+    })
+    Landing()
+    const cleanup = effect()
+    if (scenario === "signed-out") changed("SIGNED_OUT", null)
+    if (scenario === "unmounted") cleanup()
+    finish({ data: { session: { user: { id: "user-1" } } } })
+    await new Promise(setImmediate)
+    assert.deepEqual(navigation, scenario === "valid" ? [["/todo-page", { replace: true }]] : [])
+    if (scenario !== "unmounted") cleanup()
+    assert.equal(unsubscribed, 1)
+  }
+})

@@ -85,7 +85,7 @@ test("mobile category, fullscreen editor popup, save and all chart dates", async
   await expect(
     page.getByRole("heading", { level: 1, name: "할 일 추가", exact: true })
   ).toBeVisible()
-  const body = page.frameLocator("iframe.tox-edit-area__iframe").locator("body")
+  const body = page.getByRole("textbox", { name: "할 일 내용", exact: true })
   await body.fill("모바일에서 작성한 할 일")
   await page.screenshot({
     path: "test-results/mobile-editor.png",
@@ -135,7 +135,7 @@ test("browser back and close protect drafts and restore the list", async ({
   await item.getByRole("button", { name: "할 일 더보기", exact: true }).click()
   const scroll = await page.evaluate(() => window.scrollY)
   await page.getByRole("menuitem", { name: "내용 수정", exact: true }).click()
-  const body = page.frameLocator("iframe.tox-edit-area__iframe").locator("body")
+  const body = page.getByRole("textbox", { name: "할 일 내용", exact: true })
   await body.fill("저장하지 않은 모바일 메모")
   page.once("dialog", (dialog) => dialog.dismiss())
   await page.goBack()
@@ -169,19 +169,14 @@ test("editor deep links and rich text dialogs work on a small screen", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "할 일 수정" })
   ).toBeVisible()
-  await page
-    .frameLocator("iframe.tox-edit-area__iframe")
-    .locator("body")
-    .click()
-  await page
-    .getByRole("button", { name: "Insert/edit link", exact: true })
-    .click()
-  const dialog = page.getByRole("dialog", { name: "Insert/Edit Link" })
+  await page.getByRole("textbox", { name: "할 일 내용", exact: true }).click()
+  await page.getByRole("button", { name: "링크 편집", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "링크 편집" })
   await expect(dialog).toBeVisible()
   await dialog
-    .getByRole("combobox", { name: "URL", exact: true })
+    .getByRole("textbox", { name: "URL", exact: true })
     .fill("https://example.com")
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click()
+  await dialog.getByRole("button", { name: "취소", exact: true }).click()
   await page.getByRole("button", { name: "에디터 닫기" }).click()
   await expect(page).not.toHaveURL(/editor=/)
   await noOverflow(page)

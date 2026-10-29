@@ -4,6 +4,8 @@ import { TodoCategoryDto } from "@/model/todo/todo-category.dto"
 
 export const sanitizeTodo = (html: string) =>
   DOMPurify.sanitize(html, {
+    ALLOW_DATA_ATTR: false,
+    USE_PROFILES: { html: true },
     ADD_DATA_URI_TAGS: ["img"],
     FORBID_TAGS: [
       "style",
@@ -42,7 +44,9 @@ export function getBreakdown(
   const days = new Map<string, TodoItemModel[]>()
   todos.forEach((todo) => {
     const key = new Date(todo.created_at).toLocaleDateString("sv-SE")
-    days.set(key, [...(days.get(key) || []), todo])
+    const items = days.get(key)
+    if (items) items.push(todo)
+    else days.set(key, [todo])
   })
   return {
     dates: [...days]
@@ -50,12 +54,14 @@ export function getBreakdown(
       .map(([label, items]) => ({ label, ...getStats(items) })),
     categories: [
       ...categories.map((category) => ({
+        id: category.id,
         label: category.name,
         ...getStats(todos.filter((todo) => todo.category_id === category.id)),
       })),
       ...(todos.some((todo) => !todo.category_id)
         ? [
             {
+              id: null,
               label: "미분류",
               ...getStats(todos.filter((todo) => !todo.category_id)),
             },

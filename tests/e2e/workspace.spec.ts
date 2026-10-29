@@ -51,7 +51,7 @@ test("editor popup keeps the list width, traps focus and protects drafts on Esca
     path: "test-results/editor-popup-desktop.png",
     fullPage: false,
   })
-  const body = page.frameLocator("iframe.tox-edit-area__iframe").locator("body")
+  const body = page.getByRole("textbox", { name: "할 일 내용", exact: true })
   await body.fill("팝업에서 작성한 할 일")
   let confirmations = 0
   page.on("dialog", async (dialog) => {
@@ -65,15 +65,13 @@ test("editor popup keeps the list width, traps focus and protects drafts on Esca
   await page.mouse.click(12, 12)
   await expect.poll(() => confirmations).toBe(2)
   await expect(popup).toBeVisible()
-  await page
-    .getByRole("button", { name: "Insert/edit link", exact: true })
-    .click()
-  const link = page.getByRole("dialog", { name: "Insert/Edit Link" })
+  await page.getByRole("button", { name: "링크 편집", exact: true }).click()
+  const link = page.getByRole("dialog", { name: "링크 편집" })
   await expect(link).toBeVisible()
   await expect(link).toBeInViewport()
   await page.screenshot({ path: "test-results/editor-popup-link.png" })
   await link
-    .getByRole("combobox", { name: "URL", exact: true })
+    .getByRole("textbox", { name: "URL", exact: true })
     .fill("https://example.com")
   await page.keyboard.press("Escape")
   await expect(link).toHaveCount(0)
@@ -99,9 +97,7 @@ test("category, rich editor, retry, nested completion, reorder and deletion", as
     page.getByRole("heading", { name: "업무", exact: true })
   ).toBeVisible()
   await page.getByRole("button", { name: "할 일 추가", exact: true }).click()
-  const editor = page
-    .frameLocator("iframe.tox-edit-area__iframe")
-    .locator("body")
+  const editor = page.getByRole("textbox", { name: "할 일 내용", exact: true })
   await editor.fill("새로운 할 일")
   await request.post("http://127.0.0.1:54321/__fail")
   await page

@@ -4,24 +4,19 @@ import {
   TodoCategoryReqDto,
 } from "@/model/todo/todo-category.dto"
 import supabase from "@/supabase/init"
+import { fetchAllRows } from "@/repository/query"
 export const selectTodoCategoryList = async (userId: string) => {
-  const { data } = await supabase
-    .from(DB_TABLE_NAME.todoCategory)
-    .select()
-    .eq("user_id", userId)
-    .order("created_at")
-    .returns<TodoCategoryDto[]>()
-    .throwOnError()
-  return data || []
-}
-export const selectTodoCategory = async (id: number | null) => {
-  const { data } = await supabase
-    .from(DB_TABLE_NAME.todoCategory)
-    .select()
-    .eq("id", id)
-    .single<TodoCategoryDto>()
-    .throwOnError()
-  return data
+  return fetchAllRows<TodoCategoryDto>((from, to) =>
+    supabase
+      .from(DB_TABLE_NAME.todoCategory)
+      .select()
+      .eq("user_id", userId)
+      .order("created_at")
+      .order("id")
+      .range(from, to)
+      .returns<TodoCategoryDto[]>()
+      .throwOnError()
+  )
 }
 export const insertTodoCategory = async (category: TodoCategoryReqDto) => {
   const { data } = await supabase
@@ -43,20 +38,24 @@ export const updateTodoCategory = async (
     .throwOnError()
 }
 export const deleteTodoCategory = async (id: number | null) => {
-  const { data: items } = await supabase
-    .from(DB_TABLE_NAME.todoItem)
-    .select("id")
-    .eq("category_id", id)
-    .returns<{ id: number }[]>()
-    .throwOnError()
-  if (items?.length) {
+  const items = await fetchAllRows<{ id: number }>((from, to) =>
+    supabase
+      .from(DB_TABLE_NAME.todoItem)
+      .select("id")
+      .eq("category_id", id)
+      .order("id")
+      .range(from, to)
+      .returns<{ id: number }[]>()
+      .throwOnError()
+  )
+  for (let start = 0; start < items.length; start += 100) {
     // Older children may have no category_id; remove them by their parent too.
     await supabase
       .from(DB_TABLE_NAME.todoItem)
       .delete()
       .in(
         "sub_id",
-        items.map((item) => item.id)
+        items.slice(start, start + 100).map((item) => item.id)
       )
       .throwOnError()
   }

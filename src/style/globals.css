@@ -110,13 +110,14 @@
   .todo-content blockquote {
     @apply border-l-2 pl-4 text-muted-foreground;
   }
-  .tox-tinymce {
-    border-radius: 16px !important;
-    border-color: var(--border) !important;
+  .tiptap .selectedCell {
+    @apply bg-accent;
   }
-  .tox .tox-toolbar,
-  .tox .tox-toolbar__primary {
-    background: #f9fafb !important;
+  .tiptap .ProseMirror-selectednode {
+    @apply outline outline-2 outline-primary;
+  }
+  .tiptap .tableWrapper {
+    @apply overflow-x-auto;
   }
 }
 

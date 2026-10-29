@@ -328,7 +328,7 @@ export default function MyPage() {
             <ul className="space-y-5">
               {breakdown.categories.map((category) => (
                 <li
-                  key={category.label}
+                  key={category.id ?? "uncategorized"}
                   className="flex flex-wrap items-center gap-4"
                 >
                   <span className="w-16 break-words font-semibold text-muted-foreground">

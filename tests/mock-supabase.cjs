@@ -47,7 +47,10 @@ http.createServer(async (req,res) => {
   const selected = rows.filter(row => [...url.searchParams].every(([key,value]) => value.startsWith("in.(") ? value.slice(4,-1).split(",").includes(String(row[key])) : !value.startsWith("eq.") || String(row[key]) === value.slice(3)))
   if (req.method === "GET") {
     if (table === "todo_item") selected.sort((a,b) => a.order-b.order || a.id-b.id)
-    send(req.headers.accept?.includes("object") ? selected[0] || null : selected); return
+    const offset = Number(url.searchParams.get("offset") || 0)
+    const limit = Number(url.searchParams.get("limit") || 1000)
+    const page = selected.slice(offset, offset + Math.min(limit, 1000))
+    send(req.headers.accept?.includes("object") ? page[0] || null : page); return
   }
   if (req.method === "POST") {
     if (table === "profiles" && profile) { send({ message: "Profile already exists", code: "23505" },409); return }

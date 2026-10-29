@@ -43,8 +43,16 @@ export default function DefaultLayout() {
   const authCode = new URLSearchParams(useLocation().search).get("code")
   useEffect(() => {
     let active = true
+    let sessionChanged = false
     const applySession = (session: Session | null) => {
       if (!active) return
+      if (session && authCode) {
+        const callback = new URL(window.location.href)
+        callback.searchParams.delete("code")
+        navigate(`${callback.pathname}${callback.search}${callback.hash}`, {
+          replace: true,
+        })
+      }
       const nextUser = session?.user || null
       if (currentUserId.current !== nextUser?.id) {
         currentUserId.current = nextUser?.id
@@ -59,21 +67,15 @@ export default function DefaultLayout() {
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
-        if (!active) return
+        if (!active || sessionChanged) return
         if (error) throw error
-        if (data.session && authCode) {
-          const callback = new URL(window.location.href)
-          callback.searchParams.delete("code")
-          navigate(`${callback.pathname}${callback.search}${callback.hash}`, {
-            replace: true,
-          })
-        }
         applySession(data.session)
       })
       .catch(() => {
-        if (active) applySession(null)
+        if (active && !sessionChanged) applySession(null)
       })
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      sessionChanged = true
       applySession(session)
     })
     return () => {

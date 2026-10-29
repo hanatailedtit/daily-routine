@@ -34,7 +34,7 @@ test("choose a category or uncategorized in the editor and protect category-only
   await expect(
     page.getByRole("button", { name: "카테고리 선택: 공부", exact: true })
   ).toBeVisible()
-  const body = page.frameLocator("iframe.tox-edit-area__iframe").locator("body")
+  const body = page.getByRole("textbox", { name: "할 일 내용", exact: true })
   await body.fill("카테고리를 선택한 할 일")
   await page
     .getByRole("dialog", { name: "할 일 추가", exact: true })
@@ -71,7 +71,7 @@ test("create a category inside the editor, retry failures and keep the todo draf
 }) => {
   await login(page)
   await page.getByRole("button", { name: "할 일 추가", exact: true }).click()
-  const body = page.frameLocator("iframe.tox-edit-area__iframe").locator("body")
+  const body = page.getByRole("textbox", { name: "할 일 내용", exact: true })
   await body.fill("새 카테고리와 함께 저장할 메모")
   await page.getByRole("button", { name: "새 카테고리", exact: true }).click()
   const dialog = page.getByRole("dialog", {
@@ -146,8 +146,7 @@ test("category pages preselect their category and children inherit their parent 
     popup.getByRole("button", { name: /^카테고리 선택:/ })
   ).toHaveCount(0)
   await page
-    .frameLocator("iframe.tox-edit-area__iframe")
-    .locator("body")
+    .getByRole("textbox", { name: "할 일 내용", exact: true })
     .fill("카테고리를 상속한 하위 할 일")
   await popup.getByRole("button", { name: "할 일 추가", exact: true }).click()
   await expect(
@@ -202,8 +201,7 @@ test("mobile users can create and select a first category without leaving the ed
   ).toBe(true)
   await page.screenshot({ path: "test-results/editor-category-mobile.png" })
   await page
-    .frameLocator("iframe.tox-edit-area__iframe")
-    .locator("body")
+    .getByRole("textbox", { name: "할 일 내용", exact: true })
     .fill("모바일 카테고리 메모")
   await page
     .getByRole("dialog", { name: "할 일 추가", exact: true })

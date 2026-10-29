@@ -8,16 +8,26 @@ import {
   updateUserProfile,
 } from "@/repository/user/profile.repository"
 
-export const selectUserProfileService = async (id: UserProfileDto["id"]) => {
-  const data = await getUserProfile(id)
-  return data
-}
-
 export const updateUserProfileService = async (
   id: UserProfileDto["id"],
   profile: UserProfileReqDto
 ) => {
-  await updateUserProfile(id, profile)
+  await updateUserProfile(
+    id,
+    profile.user_name === undefined
+      ? profile
+      : {
+          ...profile,
+          user_name: normalizeUserName(profile.user_name),
+        }
+  )
+}
+
+function normalizeUserName(name: string) {
+  const value = name.trim()
+  if (!value || value.length > 60)
+    throw new Error("닉네임은 1~60자로 입력해 주세요.")
+  return value
 }
 
 export const createUserProfileService = async (
@@ -25,9 +35,7 @@ export const createUserProfileService = async (
   name: string,
   image: string | null
 ) => {
-  const userName = name.trim()
-  if (!userName || userName.length > 60)
-    throw new Error("닉네임은 1~60자로 입력해 주세요.")
+  const userName = normalizeUserName(name)
   const existing = await getUserProfile(id)
   if (existing) return existing
   try {

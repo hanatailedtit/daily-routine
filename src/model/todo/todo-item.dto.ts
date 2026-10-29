@@ -25,11 +25,3 @@ export const toTodoItemModel = (todoItem: TodoItemDto): TodoItemModel => {
     created_at: todoItem.created_at,
   }
 }
-
-export const toTodoItemReqDto = (todoItem: TodoItemModel): TodoItemReqDto => {
-  return {
-    todo_text: todoItem.text,
-    checked: todoItem.checked,
-    order: todoItem.order,
-  }
-}
