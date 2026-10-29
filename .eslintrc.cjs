@@ -17,6 +17,12 @@ module.exports = {
     sourceType: "module",
   },
   plugins: ["react-refresh", "prettier"],
+  overrides: [
+    {
+      files: ["src/components/ui/*.tsx"],
+      rules: { "react-refresh/only-export-components": "off" },
+    },
+  ],
   rules: {
     "prettier/prettier": [
       "error",

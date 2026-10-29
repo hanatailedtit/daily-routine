@@ -25,7 +25,10 @@ export const getTodoCategoryService = async (
 export const selectTodoCategoryService = async (
   category: TodoCategoryReqDto
 ) => {
-  await insertTodoCategory(category)
+  const name = category.name?.trim()
+  if (!name || name.length > 60)
+    throw new Error("카테고리 이름은 1~60자로 입력해 주세요.")
+  return await insertTodoCategory({ ...category, name })
 }
 
 export const deleteTodoCategoryService = async (

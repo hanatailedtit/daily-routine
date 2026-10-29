@@ -3,32 +3,33 @@ import {
   UserProfileDto,
   UserProfileReqDto,
 } from "@/model/user/user-profile.dto"
-import supabaseAdmin from "@/supabase/init"
-
-export const getUserProfile = async (userId: UserProfileDto["id"]) => {
-  const { data } = await supabaseAdmin
+import supabase from "@/supabase/init"
+export const getUserProfile = async (id: string) => {
+  const { data } = await supabase
     .from(DB_TABLE_NAME.profiles)
     .select()
-    .eq("id", userId)
-    .single<UserProfileDto>()
+    .eq("id", id)
+    .maybeSingle<UserProfileDto>()
+    .throwOnError()
   return data
 }
-
 export const insertUserProfile = async (
-  id: UserProfileDto["id"],
-  name: UserProfileDto["user_name"],
-  thumbnail?: UserProfileDto["user_image"]
+  id: string,
+  name: string,
+  thumbnail?: string | null
 ) => {
-  await supabaseAdmin.from(DB_TABLE_NAME.profiles).insert({
-    id,
-    user_name: name,
-    user_image: thumbnail,
-  })
+  await supabase
+    .from(DB_TABLE_NAME.profiles)
+    .insert({ id, user_name: name, user_image: thumbnail })
+    .throwOnError()
 }
-
 export const updateUserProfile = async (
-  id: UserProfileDto["id"],
+  id: string,
   profile: UserProfileReqDto
 ) => {
-  await supabaseAdmin.from(DB_TABLE_NAME.profiles).update(profile).eq("id", id)
+  await supabase
+    .from(DB_TABLE_NAME.profiles)
+    .update(profile)
+    .eq("id", id)
+    .throwOnError()
 }

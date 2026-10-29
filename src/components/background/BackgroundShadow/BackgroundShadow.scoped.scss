@@ -1,8 +1,0 @@
-.background-shadow {
-  background-color: rgba(var(--gray), 0.8);
-  width: 100vw;
-  height: 100vh;
-  position: absolute;
-  @include flexCol(center, center);
-  z-index: 100;
-}

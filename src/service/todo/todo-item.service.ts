@@ -70,3 +70,47 @@ export const updateTodoItemService = async (
 export const deleteTodoItemService = async (id: TodoItemModel["id"]) => {
   await deleteTodoItem(id)
 }
+
+export const setTodoCheckedService = async (
+  item: TodoItemModel,
+  checked: boolean
+) => {
+  if (item.sub_item?.length)
+    await Promise.all(
+      item.sub_item.map((child) => updateTodoItemService(child.id, { checked }))
+    )
+  await updateTodoItemService(item.id, { checked })
+  if (item.sub_id) {
+    const children = await getTodoSubListService(item.sub_id)
+    await updateTodoItemService(item.sub_id, {
+      checked: children.length > 0 && children.every((child) => child.checked),
+    })
+  }
+}
+
+export const removeTodoService = async (item: TodoItemModel) => {
+  await deleteTodoItemService(item.id)
+  if (item.sub_id) {
+    const siblings = await getTodoSubListService(item.sub_id)
+    await updateTodoItemService(item.sub_id, {
+      checked: siblings.length > 0 && siblings.every((child) => child.checked),
+    })
+  }
+}
+
+export const reorderTodoService = async (
+  todos: TodoItemModel[],
+  fromId: number,
+  toId: number
+) => {
+  const next = [...todos]
+  const from = next.findIndex((item) => item.id === fromId)
+  const to = next.findIndex((item) => item.id === toId)
+  if (from < 0 || to < 0 || from === to) return
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  // shortcut: ranks use separate REST writes; use a DB transaction if atomic ordering is required.
+  await Promise.all(
+    next.map((todo, order) => updateTodoItemService(todo.id, { order }))
+  )
+}

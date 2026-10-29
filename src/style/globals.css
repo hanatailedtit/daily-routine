@@ -1,0 +1,168 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f2f4f6;
+    --foreground: #191f28;
+    --primary: #1065cc;
+    --accent: #e8f3ff;
+    --border: #e5e8eb;
+    --muted-foreground: #4e5968;
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply m-0 bg-background font-sans text-[15px] leading-relaxed text-foreground antialiased;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
+  :focus-visible {
+    @apply outline outline-2 outline-offset-4 outline-primary;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-[-0.02em];
+  }
+  svg {
+    flex-shrink: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg bg-white p-6;
+  }
+  .page-title {
+    @apply text-[28px] font-bold leading-tight;
+  }
+  .page-description {
+    @apply mt-3 text-muted-foreground;
+  }
+  .pending-pattern {
+    background: repeating-linear-gradient(
+      135deg,
+      #f2f4f6,
+      #f2f4f6 4px,
+      #8b95a1 4px,
+      #8b95a1 5px
+    );
+  }
+  .todo-content {
+    @apply min-w-0 break-words text-[17px] leading-relaxed;
+    overflow-wrap: anywhere;
+  }
+  .todo-content p {
+    @apply my-1;
+  }
+  .todo-content ul {
+    @apply list-disc pl-6;
+  }
+  .todo-content ol {
+    @apply list-decimal pl-6;
+  }
+  .todo-content a {
+    @apply text-primary underline;
+  }
+  .todo-content img {
+    @apply my-3 h-auto max-w-full rounded-md;
+  }
+  .todo-content table {
+    @apply max-w-full border-collapse;
+  }
+  .todo-content td,
+  .todo-content th {
+    @apply border p-2;
+  }
+  .todo-content h1,
+  .todo-content h2,
+  .todo-content h3 {
+    @apply my-2 text-xl font-bold;
+  }
+  .todo-content pre {
+    @apply overflow-auto whitespace-pre-wrap rounded-md bg-background p-3;
+  }
+  .todo-content blockquote {
+    @apply border-l-2 pl-4 text-muted-foreground;
+  }
+  .tox-tinymce {
+    border-radius: 16px !important;
+    border-color: var(--border) !important;
+  }
+  .tox .tox-toolbar,
+  .tox .tox-toolbar__primary {
+    background: #f9fafb !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .todo-editor {
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    transform: none;
+    display: flex;
+    height: 100dvh;
+    flex-direction: column;
+    border-radius: 0;
+    padding: 0;
+    overscroll-behavior: contain;
+  }
+  .editor-heading {
+    min-height: 64px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+  }
+  .editor-content {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 16px 24px;
+  }
+  .editor-actions {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+  }
+  .editor-actions button {
+    height: 56px;
+    border-radius: 16px;
+  }
+  .editor-actions button:first-child {
+    flex: 1;
+  }
+  .editor-actions button:last-child {
+    flex: 2;
+  }
+}

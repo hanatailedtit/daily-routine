@@ -1,23 +1,20 @@
+import { createBrowserRouter, Navigate } from "react-router-dom"
 import Landing from "@/pages/landing/Landing"
-import SignUpPage from "@/pages/sign-up-page/SignUpPage"
 import TodoPage from "@/pages/todo-page/TodoPage"
-import MyPageRoutes from "@/routes/MyPageRoutes.tsx"
-import { createBrowserRouter } from "react-router-dom"
-
-const Router = createBrowserRouter([
-  ...MyPageRoutes,
+import MyPage from "@/pages/my-page/MyPage"
+import SignUp from "@/pages/sign-up/SignUp"
+import DefaultLayout from "@/components/layout/DefaultLayout/DefaultLayout"
+const router = createBrowserRouter([
+  { path: "/", element: <Landing /> },
   {
-    path: "/",
-    element: <Landing />,
+    element: <DefaultLayout />,
+    children: [
+      { path: "/sign-up", element: <SignUp /> },
+      { path: "/todo-page", element: <TodoPage /> },
+      { path: "/my-page", element: <MyPage /> },
+    ],
   },
-  {
-    path: "/todo-page",
-    element: <TodoPage />,
-  },
-  {
-    path: "/sign-up",
-    element: <SignUpPage />,
-  },
+  { path: "*", element: <Navigate to="/" replace /> },
 ])
 
-export default Router
+export default router

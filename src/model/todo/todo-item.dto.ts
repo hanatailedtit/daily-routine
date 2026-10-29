@@ -6,7 +6,7 @@ export type TodoItemDto = {
   todo_text: string
   checked: boolean
   created_at: string
-  category_id: number
+  category_id: number | null
   sub_id: number | null
   order: number
 }

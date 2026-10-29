@@ -1,65 +1,59 @@
-import { DB_TABLE_NAME } from "@/constants/db-table.constants.ts"
-import { TodoItemDto, TodoItemReqDto } from "@/model/todo/todo-item.dto.ts"
-import { TodoItemModel } from "@/model/todo/todo-item.model"
-import supabaseAdmin from "@/supabase/init.ts"
-
+import { DB_TABLE_NAME } from "@/constants/db-table.constants"
+import { TodoItemDto, TodoItemReqDto } from "@/model/todo/todo-item.dto"
+import supabase from "@/supabase/init"
 export const getTodoList = async (
-  userId: TodoItemReqDto["user_id"],
+  userId: string,
   categoryId?: string | null
 ) => {
-  const response = supabaseAdmin
-    .from("todo_item")
+  let request = supabase
+    .from(DB_TABLE_NAME.todoItem)
     .select()
     .eq("user_id", userId)
-  if (categoryId) {
-    response.eq("category_id", Number(categoryId))
-  }
-  const { data } = await response.order("order").returns<TodoItemDto[]>()
+  if (categoryId) request = request.eq("category_id", Number(categoryId))
+  const { data } = await request
+    .order("order")
+    .order("id")
+    .returns<TodoItemDto[]>()
+    .throwOnError()
   return data || []
 }
-
-export const getTodoItem = async (id: TodoItemReqDto["id"]) => {
-  const { data } = await supabaseAdmin
-    .from("todo_item")
+export const getTodoItem = async (id: number | undefined) => {
+  const { data } = await supabase
+    .from(DB_TABLE_NAME.todoItem)
     .select()
     .eq("id", id)
     .single<TodoItemDto>()
+    .throwOnError()
   return data
 }
-
-export const getTodoSubList = async (subId: TodoItemReqDto["sub_id"]) => {
-  const { data } = await supabaseAdmin
-    .from("todo_item")
+export const getTodoSubList = async (id: number | null | undefined) => {
+  const { data } = await supabase
+    .from(DB_TABLE_NAME.todoItem)
     .select()
-    .eq("sub_id", subId)
+    .eq("sub_id", id)
     .returns<TodoItemDto[]>()
+    .throwOnError()
   return data || []
 }
-
-export const addTodoItem = async (todoReq: TodoItemReqDto) => {
-  await supabaseAdmin.from(DB_TABLE_NAME.todoItem).insert(todoReq)
+export const addTodoItem = async (item: TodoItemReqDto) => {
+  await supabase.from(DB_TABLE_NAME.todoItem).insert(item).throwOnError()
 }
-
-export const updateTodoItem = async (
-  id: TodoItemModel["id"],
-  todoItem: TodoItemReqDto
-) => {
-  const { error } = await supabaseAdmin
+export const updateTodoItem = async (id: number, item: TodoItemReqDto) => {
+  await supabase
     .from(DB_TABLE_NAME.todoItem)
-    .update(todoItem)
+    .update(item)
     .eq("id", id)
-  if (error) console.log(error)
+    .throwOnError()
 }
-
-export const deleteTodoItem = async (id: TodoItemModel["id"]) => {
-  const { error: mainError } = await supabaseAdmin
-    .from(DB_TABLE_NAME.todoItem)
-    .delete()
-    .eq("id", id)
-  const { error: subError } = await supabaseAdmin
+export const deleteTodoItem = async (id: number) => {
+  await supabase
     .from(DB_TABLE_NAME.todoItem)
     .delete()
     .eq("sub_id", id)
-  if (mainError) console.log(mainError)
-  if (subError) console.log(subError)
+    .throwOnError()
+  await supabase
+    .from(DB_TABLE_NAME.todoItem)
+    .delete()
+    .eq("id", id)
+    .throwOnError()
 }
